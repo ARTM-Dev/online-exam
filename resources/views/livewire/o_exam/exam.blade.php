@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Course;
+use App\Models\Question;
 use Livewire\Volt\Component;
 use App\Models\Exam;
 
@@ -16,6 +17,7 @@ new class extends Component {
     public $start_time = '';
     public $end_time = '';
 
+
     public function mount(): void
     {
         $this->exams = Exam::with('course')->get();
@@ -24,8 +26,9 @@ new class extends Component {
 
     public function get_exam(): void
     {
-        $this->exams = Exam::all();
+        $this->exams = Exam::with('course')->get();
     }
+
 
     public function get_course(): void
     {
@@ -34,7 +37,6 @@ new class extends Component {
 
     public function save()
     {
-
         $this->validate([
             'course_id' => 'required|exists:courses,id',
             'name' => 'required|string',
@@ -43,7 +45,17 @@ new class extends Component {
             'end_time' => 'required|date|after:start_time',
         ]);
 
-        Exam::create([
+        $questionsCount = Question::where('course_id', $this->course_id)->count();
+
+        if ($questionsCount < $this->q_number) {
+            $this->addError(
+                'q_number',
+                'تعداد سوالات این دوره کمتر از تعداد سوالات آزمون است'
+            );
+            return;
+        }
+
+        $exam = Exam::create([
             'name' => $this->name,
             'course_id' => $this->course_id,
             'q_number' => $this->q_number,
@@ -51,10 +63,20 @@ new class extends Component {
             'end_time' => $this->end_time,
         ]);
 
-        Flux::modal('New_Exam')->close();
-        $this->get_exam();
+        $randomQuestions = Question::where('course_id', $this->course_id)
+            ->inRandomOrder()
+            ->take($this->q_number)
+            ->get();
 
+        $exam->questions()->attach($randomQuestions->pluck('id'));
+
+        Flux::modal('New_Exam')->close();
+
+        $this->reset(['course_id', 'name', 'q_number', 'start_time', 'end_time']);
+
+        $this->get_exam();
     }
+
 
     public $delete_id = '';
 
@@ -65,14 +87,20 @@ new class extends Component {
 
     public function delete_exam(): void
     {
+        $exam = Exam::find($this->delete_id);
 
-        Exam::find($this->delete_id)->delete();
+        $exam->questions()->detach();
+
+        $exam->delete();
+
 
         Flux::modal('delete_exam' . $this->delete_id)->close();
+
         $this->get_exam();
 
         $this->delete_id = '';
     }
+
 
     public $edit_id = '';
 
@@ -99,7 +127,6 @@ new class extends Component {
 
     public function update_exam(): void
     {
-
         $this->validate([
             'edit_course_id' => 'required|exists:courses,id',
             'edit_name' => 'required|string',
@@ -107,7 +134,7 @@ new class extends Component {
             'edit_start_time' => 'required|date',
             'edit_end_time' => 'required|date|after:edit_start_time',
         ]);
-        
+
         $exam = Exam::find($this->edit_id);
 
         $exam->update([
@@ -117,6 +144,13 @@ new class extends Component {
             'start_time' => $this->edit_start_time,
             'end_time' => $this->edit_end_time,
         ]);
+
+        $randomQuestions = Question::where('course_id', $this->edit_course_id)
+            ->inRandomOrder()
+            ->take($this->edit_q_number)
+            ->get();
+
+        $exam->questions()->sync($randomQuestions->pluck('id'));
 
         Flux::modal('edit_exam' . $this->edit_id)->close();
 
@@ -131,8 +165,6 @@ new class extends Component {
             'edit_end_time',
         ]);
     }
-
-
 
 
 
@@ -163,7 +195,7 @@ new class extends Component {
                 <br>
 
                 <flux:modal.trigger :name="'delete_exam'.$exam->id">
-                    <flux:button wire:click="deleting_id({{$exam->id}})" >{{__('حذف آزمون')}}</flux:button>
+                    <flux:button wire:click="deleting_id({{$exam->id}})">{{__('حذف آزمون')}}</flux:button>
                 </flux:modal.trigger>
 
                 <flux:modal :name="'delete_exam'.$exam->id" class="md:w-96">
@@ -176,7 +208,7 @@ new class extends Component {
 
 
                             <div class="flex">
-                                <flux:spacer />
+                                <flux:spacer/>
                                 <flux:button type="submit" variant="primary" color="blue">{{__('حذف')}}</flux:button>
                             </div>
                         </form>
@@ -213,14 +245,16 @@ new class extends Component {
                                     </flux:select.option>
                                 @endforeach
                             </flux:select>
-                            <flux:input wire:model="edit_name" label="نام" placeholder="نام آزمون" class:input="text-center"/>
-                            <flux:input wire:model="edit_q_number" label="تعداد سوالات" placeholder="تعداد سوالات" type="number"/>
-                            <flux:input wire:model="edit_start_time" label="تاریخ شروع" type="datetime-local" />
+                            <flux:input wire:model="edit_name" label="نام" placeholder="نام آزمون"
+                                        class:input="text-center"/>
+                            <flux:input wire:model="edit_q_number" label="تعداد سوالات" placeholder="تعداد سوالات"
+                                        type="number"/>
+                            <flux:input wire:model="edit_start_time" label="تاریخ شروع" type="datetime-local"/>
                             <flux:input wire:model="edit_end_time" label="تاریخ پایان" type="datetime-local"/>
 
 
                             <div class="flex">
-                                <flux:spacer />
+                                <flux:spacer/>
                                 <flux:button type="submit" variant="primary" color="blue">
                                     {{__('ذخیره تغییرات')}}
                                 </flux:button>
@@ -231,45 +265,45 @@ new class extends Component {
             </div>
 
         @endforeach
-            <flux:modal.trigger name="New_Exam">
-                <flux:button>افزودن آزمون</flux:button>
-            </flux:modal.trigger>
+        <flux:modal.trigger name="New_Exam">
+            <flux:button>افزودن آزمون</flux:button>
+        </flux:modal.trigger>
 
-            <flux:modal name="New_Exam" class="md:w-96">
-                <form wire:submit.prevent="save">
-                    <div class="space-y-6">
+        <flux:modal name="New_Exam" class="md:w-96">
+            <form wire:submit.prevent="save">
+                <div class="space-y-6">
 
-                        <div>
-                            <flux:heading size="lg">{{ __('افزودن آزمون') }}</flux:heading>
-                            <flux:text class="mt-2">{{ __('اطلاعات خواسته شده را وارد کنید') }}</flux:text>
-                        </div>
-
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">نام دوره</label>
-                            <flux:select name="course_id" wire:model="course_id" size="sm" placeholder="انتخاب دوره">
-                                @foreach($courses as $course)
-                                    <flux:select.option value="{{ $course->id }}">
-                                        {{ $course->name }}
-                                    </flux:select.option>
-                                @endforeach
-                            </flux:select>
-                        </div>
-                        <flux:input label="نام آزمون" wire:model="name" placeholder="نام آزمون"/>
-
-                        <flux:input label="تعداد سوالات" wire:model="q_number" type="number" placeholder="تعداد سوالات" />
-
-                        <flux:input label="تاریخ شروع" wire:model="start_time" type="datetime-local" />
-
-                        <flux:input label="تاریخ پایان" wire:model="end_time" type="datetime-local" />
-
-                        <div class="flex justify-end">
-                            <flux:button type="submit" variant="primary">ذخیره</flux:button>
-                        </div>
-
+                    <div>
+                        <flux:heading size="lg">{{ __('افزودن آزمون') }}</flux:heading>
+                        <flux:text class="mt-2">{{ __('اطلاعات خواسته شده را وارد کنید') }}</flux:text>
                     </div>
-                </form>
-            </flux:modal>
+
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">نام دوره</label>
+                        <flux:select name="course_id" wire:model="course_id" size="sm" placeholder="انتخاب دوره">
+                            @foreach($courses as $course)
+                                <flux:select.option value="{{ $course->id }}">
+                                    {{ $course->name }}
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+                    </div>
+                    <flux:input label="نام آزمون" wire:model="name" placeholder="نام آزمون"/>
+
+                    <flux:input label="تعداد سوالات" wire:model="q_number" type="number" placeholder="تعداد سوالات"/>
+
+                    <flux:input label="تاریخ شروع" wire:model="start_time" type="datetime-local"/>
+
+                    <flux:input label="تاریخ پایان" wire:model="end_time" type="datetime-local"/>
+
+                    <div class="flex justify-end">
+                        <flux:button type="submit" variant="primary">ذخیره</flux:button>
+                    </div>
+
+                </div>
+            </form>
+        </flux:modal>
 
     </flux:main>
 

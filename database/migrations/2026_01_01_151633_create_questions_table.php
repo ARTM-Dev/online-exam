@@ -15,11 +15,11 @@ return new class extends Migration
             $table->id();
             $table->foreignId('course_id')->constrained()->cascadeOnDelete();
             $table->text('question_text');
-            $table->string('a');
-            $table->string('b');
-            $table->string('c');
-            $table->string('d');
-            $table->char('answer', 1);
+            $table->string('option_1');
+            $table->string('option_2');
+            $table->string('option_3');
+            $table->string('option_4');
+            $table->tinyInteger('answer'); 
             $table->timestamps();
         });
     }

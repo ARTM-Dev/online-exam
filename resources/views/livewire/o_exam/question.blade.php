@@ -199,7 +199,7 @@ new class extends Component {
                 <flux:modal :name="'delete_question'.$question->id" class="md:w-96">
                     <div class="space-y-6">
                         <flux:heading size="lg">حذف سوال #{{ $question->id }}</flux:heading>
-                        <form wire:submit="delete_question()" class="space-y-6">
+                        <form wire:submit.prevent="delete_question()" class="space-y-6">
                             <div class="flex justify-end">
                                 <flux:button type="submit" variant="primary">حذف</flux:button>
                             </div>
@@ -215,7 +215,7 @@ new class extends Component {
                     <div class="space-y-6">
                         <flux:heading size="lg">ویرایش سوال</flux:heading>
 
-                        <form wire:submit="update_question()" class="space-y-6">
+                        <form wire:submit.prevent="update_question()" class="space-y-6">
 
                             <flux:select wire:model="edit_course_id" label="دوره">
                                 @foreach($courses as $course)

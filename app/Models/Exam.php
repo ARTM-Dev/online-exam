@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+
 class Exam extends Model
 {
     protected $fillable = [
@@ -20,8 +21,8 @@ class Exam extends Model
     {
         return $this->belongsTo(Course::class);
     }
-    public function Question(): BelongsToMany
+    public function questions(): BelongsToMany
     {
-        return $this->belongsToMany(Question::class);
+        return $this->belongsToMany(Question::class , 'exam_questions');
     }
 }
