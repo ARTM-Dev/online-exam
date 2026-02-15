@@ -33,3 +33,26 @@ Route::middleware(['auth'])->group(function () {
 
 Volt::route('exam', 'o_exam.exam')->name('exam');
 Volt::route('question', 'o_exam.question')->name('question');
+Volt::route('/exams/{exam}/questions', 'o_exam.exam-questions')
+    ->name('exam.questions');
+
+Volt::route('/exams/{exam}/take', 'o_exam.exam-take')
+    ->name('exam.take');
+
+Route::middleware(['auth', 'admin'])->group(function () {
+
+    Volt::route('exam', 'o_exam.exam')->name('exam');
+
+    Volt::route('question', 'o_exam.question')->name('question');
+
+    Volt::route('/exams/{exam}/questions', 'o_exam.exam-questions')
+        ->name('exam.questions');
+
+});
+
+Route::middleware(['auth'])->group(function () {
+
+    Volt::route('/exams', 'o_exam.exams-list')
+        ->name('exams.list');
+
+});

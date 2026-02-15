@@ -4,14 +4,10 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
-    /**
-     * Run the migrations.
-     */
+return new class extends Migration {
     public function up(): void
     {
-        Schema::create('exam_results', function (Blueprint $table) {
+        Schema::create('exam_user_answers', function (Blueprint $table) {
             $table->id();
 
             $table->foreignId('user_id')
@@ -22,19 +18,22 @@ return new class extends Migration
                 ->constrained()
                 ->cascadeOnDelete();
 
-            $table->integer('score')->default(0);
+            $table->foreignId('question_id')
+                ->constrained()
+                ->cascadeOnDelete();
+
+            $table->tinyInteger('selected_answer');
+
+            $table->boolean('is_correct')->default(false);
 
             $table->timestamps();
 
-            $table->unique(['user_id', 'exam_id']);
+            $table->unique(['user_id', 'exam_id', 'question_id']);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('exam_results');
+        Schema::dropIfExists('exam_user_answers');
     }
 };

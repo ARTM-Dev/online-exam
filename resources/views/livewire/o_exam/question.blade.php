@@ -30,6 +30,9 @@ new class extends Component {
 
     public function mount(): void
     {
+        if (auth()->user()->role !== 'admin'){
+            abort(403);
+        }
         $this->get_questions();
         $this->get_courses();
     }
@@ -69,6 +72,19 @@ new class extends Component {
         \Flux::modal('New_Question')->close();
         $this->get_questions();
         $this->reset(['course_id','question_text','option_1','option_2','option_3','option_4','answer']);
+    }
+
+    public function resetNewQuestionForm(): void
+    {
+        $this->reset([
+            'course_id',
+            'question_text',
+            'option_1',
+            'option_2',
+            'option_3',
+            'option_4',
+            'answer',
+        ]);
     }
 
 
@@ -135,115 +151,173 @@ new class extends Component {
 
 ?>
 <div>
+    <flux:main class="p-6 space-y-6">
 
-    <flux:main class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="flex justify-between items-center">
+            <flux:heading size="lg">مدیریت سوالات</flux:heading>
 
-        <flux:modal.trigger name="New_Question">
-            <flux:button class="mt-4">افزودن سوال جدید</flux:button>
-        </flux:modal.trigger>
+            <flux:modal.trigger name="New_Question">
+                <flux:button color="green" variant="primary">
+                    + افزودن سوال
+                </flux:button>
+            </flux:modal.trigger>
+        </div>
 
-        <flux:modal name="New_Question" class="md:w-96">
-            <form wire:submit.prevent="save">
-                <div class="space-y-6">
-                    <flux:heading size="lg">افزودن سوال جدید</flux:heading>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-                    <flux:select wire:model="course_id" label="دوره">
-                        <flux:select.option value="" disabled selected>انتخاب دوره</flux:select.option>
-                        @foreach($courses as $course)
-                            <flux:select.option value="{{ $course->id }}">{{ $course->name }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
+            @foreach($questions as $question)
+                <flux:card class="space-y-3">
 
-                    <flux:input wire:model="question_text" label="متن سوال"/>
-                    <flux:input wire:model="option_1" label="گزینه A"/>
-                    <flux:input wire:model="option_2" label="گزینه B"/>
-                    <flux:input wire:model="option_3" label="گزینه C"/>
-                    <flux:input wire:model="option_4" label="گزینه D"/>
-                    <flux:select wire:model="answer" label="پاسخ صحیح">
-                        <flux:select.option value="" disabled selected>انتخاب پاسخ صحیح</flux:select.option>
-                        <flux:select.option value="1">A</flux:select.option>
-                        <flux:select.option value="2">B</flux:select.option>
-                        <flux:select.option value="3">C</flux:select.option>
-                        <flux:select.option value="4">D</flux:select.option>
-                    </flux:select>
+                    <div class="flex justify-between items-center">
+                        <flux:heading size="md">
+                            سوال #{{ $question->id }}
+                        </flux:heading>
 
-                    <div class="flex justify-end">
-                        <flux:button type="submit" variant="primary">ذخیره</flux:button>
+                        <flux:badge color="blue">
+                            {{ $question->course->name ?? 'نامشخص' }}
+                        </flux:badge>
                     </div>
-                </div>
-            </form>
-        </flux:modal>
-        <flux:spacer />
 
+                    <flux:text size="sm">
+                        {{ $question->question_text }}
+                    </flux:text>
 
-        @foreach($questions as $question)
-            <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 hover:shadow-xl transition">
-                <h2 class="text-lg font-bold mb-2 text-purple-600">سوال #{{ $question->id }}</h2>
-                <p><span class="font-semibold">دوره:</span> {{ $question->course->name ?? 'نامشخص' }}</p>
-                <p><span class="font-semibold">متن سوال:</span> {{ $question->question_text }}</p>
+                    <flux:separator />
 
-                <p><span class="font-semibold">گزینه‌ها:</span></p>
-                <ul class="ml-4">
-                    <li>A: {{ $question->option_1 }}</li>
-                    <li>B: {{ $question->option_2 }}</li>
-                    <li>C: {{ $question->option_3 }}</li>
-                    <li>D: {{ $question->option_4 }}</li>
-                </ul>
+                    <ul class="text-sm space-y-1">
+                        <li><strong>A:</strong> {{ $question->option_1 }}</li>
+                        <li><strong>B:</strong> {{ $question->option_2 }}</li>
+                        <li><strong>C:</strong> {{ $question->option_3 }}</li>
+                        <li><strong>D:</strong> {{ $question->option_4 }}</li>
+                    </ul>
 
-                <p><span class="font-semibold">پاسخ صحیح:</span> {{ ['A','B','C','D'][$question->answer - 1] }}</p>
+                    <flux:callout color="green" size="sm">
+                        پاسخ صحیح:
+                        {{ ['A','B','C','D'][$question->answer - 1] }}
+                    </flux:callout>
 
-                <flux:modal.trigger :name="'delete_question'.$question->id">
-                    <flux:button wire:click="deleting_id({{ $question->id }})" variant="danger">حذف سوال</flux:button>
-                </flux:modal.trigger>
+                    <flux:separator />
+
+                    <div class="flex justify-between">
+                        <flux:modal.trigger :name="'delete_question'.$question->id">
+                            <flux:button
+                                size="xs"
+                                color="red"
+                                variant="outline"
+                                wire:click="deleting_id({{ $question->id }})"
+                            >
+                                حذف
+                            </flux:button>
+                        </flux:modal.trigger>
+
+                        <flux:modal.trigger :name="'edit_question'.$question->id">
+                            <flux:button
+                                size="xs"
+                                variant="outline"
+                                wire:click="edit_question({{ $question->id }})"
+                            >
+                                ویرایش
+                            </flux:button>
+                        </flux:modal.trigger>
+                    </div>
+
+                </flux:card>
 
                 <flux:modal :name="'delete_question'.$question->id" class="md:w-96">
                     <div class="space-y-6">
-                        <flux:heading size="lg">حذف سوال #{{ $question->id }}</flux:heading>
-                        <form wire:submit.prevent="delete_question()" class="space-y-6">
-                            <div class="flex justify-end">
-                                <flux:button type="submit" variant="primary">حذف</flux:button>
+                        <flux:heading size="lg">
+                            حذف سوال
+                        </flux:heading>
+
+                        <form wire:submit.prevent="delete_question">
+                            <div class="flex justify-end gap-2">
+                                <flux:button type="submit" color="red" variant="primary">
+                                    حذف
+                                </flux:button>
                             </div>
                         </form>
                     </div>
                 </flux:modal>
-
-                <flux:modal.trigger :name="'edit_question'.$question->id">
-                    <flux:button wire:click="edit_question({{ $question->id }})" variant="primary" class="mt-2">ویرایش سوال</flux:button>
-                </flux:modal.trigger>
 
                 <flux:modal :name="'edit_question'.$question->id" class="md:w-96" :dismissible="false">
-                    <div class="space-y-6">
+                    <form wire:submit.prevent="update_question" class="space-y-4">
+
                         <flux:heading size="lg">ویرایش سوال</flux:heading>
 
-                        <form wire:submit.prevent="update_question()" class="space-y-6">
+                        <flux:select wire:model="edit_course_id" label="دوره">
+                            <flux:select.option value="">انتخاب دوره</flux:select.option>
+                            @foreach($courses as $course)
+                                <flux:select.option value="{{ $course->id }}">
+                                    {{ $course->name }}
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
 
-                            <flux:select wire:model="edit_course_id" label="دوره">
-                                @foreach($courses as $course)
-                                    <flux:select.option value="{{ $course->id }}">{{ $course->name }}</flux:select.option>
-                                @endforeach
-                            </flux:select>
+                        <flux:input wire:model="edit_question_text" label="متن سوال"/>
+                        <flux:input wire:model="edit_option_1" label="گزینه A"/>
+                        <flux:input wire:model="edit_option_2" label="گزینه B"/>
+                        <flux:input wire:model="edit_option_3" label="گزینه C"/>
+                        <flux:input wire:model="edit_option_4" label="گزینه D"/>
 
-                            <flux:input wire:model="edit_question_text" label="متن سوال"/>
-                            <flux:input wire:model="edit_option_1" label="گزینه A"/>
-                            <flux:input wire:model="edit_option_2" label="گزینه B"/>
-                            <flux:input wire:model="edit_option_3" label="گزینه C"/>
-                            <flux:input wire:model="edit_option_4" label="گزینه D"/>
-                            <flux:select wire:model="edit_answer" label="پاسخ صحیح">
-                                <flux:select.option value="1">A</flux:select.option>
-                                <flux:select.option value="2">B</flux:select.option>
-                                <flux:select.option value="3">C</flux:select.option>
-                                <flux:select.option value="4">D</flux:select.option>
-                            </flux:select>
+                        <flux:select wire:model="edit_answer" label="پاسخ صحیح">
+                            <flux:select.option value="">انتخاب پاسخ</flux:select.option>
+                            <flux:select.option value="1">A</flux:select.option>
+                            <flux:select.option value="2">B</flux:select.option>
+                            <flux:select.option value="3">C</flux:select.option>
+                            <flux:select.option value="4">D</flux:select.option>
+                        </flux:select>
 
-                            <div class="flex justify-end">
-                                <flux:button type="submit" variant="primary">ذخیره تغییرات</flux:button>
-                            </div>
-                        </form>
-                    </div>
+                        <div class="flex justify-end">
+                            <flux:button type="submit" variant="primary">
+                                ذخیره تغییرات
+                            </flux:button>
+                        </div>
+
+                    </form>
                 </flux:modal>
+            @endforeach
+        </div>
 
-            </div>
-        @endforeach
+        <flux:modal
+            name="New_Question"
+            class="md:w-96"
+            x-on:close="$wire.resetNewQuestionForm()"
+        >
+            <form wire:submit.prevent="save" class="space-y-4">
+
+                <flux:heading size="lg">افزودن سوال جدید</flux:heading>
+
+                <flux:select wire:model="course_id" label="دوره">
+                    <flux:select.option value="">انتخاب دوره</flux:select.option>
+                    @foreach($courses as $course)
+                        <flux:select.option value="{{ $course->id }}">
+                            {{ $course->name }}
+                        </flux:select.option>
+                    @endforeach
+                </flux:select>
+
+                <flux:input wire:model="question_text" label="متن سوال"/>
+                <flux:input wire:model="option_1" label="گزینه A"/>
+                <flux:input wire:model="option_2" label="گزینه B"/>
+                <flux:input wire:model="option_3" label="گزینه C"/>
+                <flux:input wire:model="option_4" label="گزینه D"/>
+
+                <flux:select wire:model="answer" label="پاسخ صحیح">
+                    <flux:select.option value="">انتخاب پاسخ</flux:select.option>
+                    <flux:select.option value="1">A</flux:select.option>
+                    <flux:select.option value="2">B</flux:select.option>
+                    <flux:select.option value="3">C</flux:select.option>
+                    <flux:select.option value="4">D</flux:select.option>
+                </flux:select>
+
+                <div class="flex justify-end">
+                    <flux:button type="submit" variant="primary">
+                        ذخیره
+                    </flux:button>
+                </div>
+
+            </form>
+        </flux:modal>
 
     </flux:main>
 </div>

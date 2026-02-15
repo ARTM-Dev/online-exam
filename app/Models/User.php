@@ -14,6 +14,12 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
+
+
+    public function userAnswers()
+    {
+        return $this->hasMany(ExamUserAnswer::class);
+    }
     /**
      * The attributes that are mass assignable.
      *

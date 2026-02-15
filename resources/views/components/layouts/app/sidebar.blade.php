@@ -13,7 +13,6 @@
 
             <flux:navlist variant="outline">
                 <flux:navlist.group :heading="__('Platform')" class="grid">
-
                     <!-- Dashboard -->
                     <flux:navlist.item
                         :href="route('dashboard')"
@@ -22,21 +21,39 @@
                         {{ __('Dashboard') }}
                     </flux:navlist.item>
 
-                    <!-- Exam -->
-                    <flux:navlist.item
-                        :href="route('exam')"
-                        :current="request()->routeIs('exam')"
-                        wire:navigate>
-                        {{ __('Exam') }}
-                    </flux:navlist.item>
+                    @if(auth()->user()->role === 'admin')
+                        <!-- Exams (Admin) -->
+                        <flux:navlist.item
+                            :href="route('exams.list')"
+                            :current="request()->routeIs('exams.list')"
+                            wire:navigate>
+                            {{ __('Exams') }}
+                        </flux:navlist.item>
 
-                    <!-- Question -->
-                    <flux:navlist.item
-                        :href="route('question')"
-                        :current="request()->routeIs('question')"
-                        wire:navigate>
-                        {{ __('Question') }}
-                    </flux:navlist.item>
+                        <!-- Exam (Admin) -->
+                        <flux:navlist.item
+                            :href="route('exam')"
+                            :current="request()->routeIs('exam')"
+                            wire:navigate>
+                            {{ __('Exam') }}
+                        </flux:navlist.item>
+
+                        <!-- Question (Admin) -->
+                        <flux:navlist.item
+                            :href="route('question')"
+                            :current="request()->routeIs('question')"
+                            wire:navigate>
+                            {{ __('Question') }}
+                        </flux:navlist.item>
+                    @else
+                        <!-- Exams (Regular User) -->
+                        <flux:navlist.item
+                            :href="route('exams.list')"
+                            :current="request()->routeIs('exams.list')"
+                            wire:navigate>
+                            {{ __('Exams') }}
+                        </flux:navlist.item>
+                    @endif
 
                 </flux:navlist.group>
             </flux:navlist>
